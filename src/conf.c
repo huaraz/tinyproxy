@@ -292,7 +292,6 @@ free_added_headers (vector_t add_headers)
 
 void free_config (struct config_s *conf)
 {
-        safefree (conf->config_file);
         safefree (conf->logf_name);
         safefree (conf->stathost);
         safefree (conf->user);
@@ -447,118 +446,26 @@ done:
         return ret;
 }
 
-static void initialize_with_defaults (struct config_s *conf,
-                                      struct config_s *defaults)
+static void initialize_config_defaults (struct config_s *conf)
 {
-        if (defaults->logf_name) {
-                conf->logf_name = safestrdup (defaults->logf_name);
-        }
+        memset (conf, 0, sizeof(*conf));
 
-        if (defaults->config_file) {
-                conf->config_file = safestrdup (defaults->config_file);
-        }
-
-        conf->syslog = defaults->syslog;
-        conf->port = defaults->port;
-
-        if (defaults->stathost) {
-                conf->stathost = safestrdup (defaults->stathost);
-        }
-
-        conf->godaemon = defaults->godaemon;
-        conf->quit = defaults->quit;
-
-        if (defaults->user) {
-                conf->user = safestrdup (defaults->user);
-        }
-
-        if (defaults->group) {
-                conf->group = safestrdup (defaults->group);
-        }
-
-        if (defaults->listen_addrs) {
-                ssize_t i;
-
-                conf->listen_addrs = vector_create();
-                for (i=0; i < vector_length(defaults->listen_addrs); i++) {
-                        char *addr;
-                        size_t size;
-                        addr = (char *)vector_getentry(defaults->listen_addrs,
-                                                       i, &size);
-                        vector_append(conf->listen_addrs, addr, size);
-                }
-
-        }
-
-#ifdef FILTER_ENABLE
-        if (defaults->filter) {
-                conf->filter = safestrdup (defaults->filter);
-        }
-
-        conf->filter_url = defaults->filter_url;
-        conf->filter_extended = defaults->filter_extended;
-        conf->filter_casesensitive = defaults->filter_casesensitive;
-#endif                          /* FILTER_ENABLE */
-
-#ifdef XTINYPROXY_ENABLE
-        conf->add_xtinyproxy = defaults->add_xtinyproxy;
-#endif
-
-#ifdef REVERSE_SUPPORT
-        /* struct reversepath *reversepath_list; */
-        conf->reverseonly = defaults->reverseonly;
-        conf->reversemagic = defaults->reversemagic;
-
-        if (defaults->reversebaseurl) {
-                conf->reversebaseurl = safestrdup (defaults->reversebaseurl);
-        }
-#endif
-
-#ifdef UPSTREAM_SUPPORT
-        conf->upstream_list = NULL;
-        /* struct upstream *upstream_list; */
-#endif                          /* UPSTREAM_SUPPORT */
-
-        if (defaults->pidpath) {
-                conf->pidpath = safestrdup (defaults->pidpath);
-        }
-
-        conf->idletimeout = defaults->idletimeout;
-
-#ifdef UPSTREAM_SUPPORT
-        conf->deadtime = defaults->deadtime;
-#endif
-
-        if (defaults->bind_address) {
-                conf->bind_address = safestrdup (defaults->bind_address);
-        }
-
-        conf->bindsame = defaults->bindsame;
-
-        if (defaults->via_proxy_name) {
-                conf->via_proxy_name = safestrdup (defaults->via_proxy_name);
-        }
-
-        conf->disable_viaheader = defaults->disable_viaheader;
-
-        if (defaults->errorpage_undef) {
-                conf->errorpage_undef = safestrdup (defaults->errorpage_undef);
-        }
-
-        if (defaults->statpage) {
-                conf->statpage = safestrdup (defaults->statpage);
-        }
-
-        /* vector_t access_list; */
-        /* vector_t connect_ports; */
-        /* hashmap_t anonymous_map; */
+        /*
+         * Make sure the HTML error pages array is NULL to begin with.
+         * (FIXME: Should have a better API for all this)
+         */
+        conf->errorpages = NULL;
+        conf->stathost = safestrdup (TINYPROXY_STATHOST);
+        conf->idletimeout = MAX_IDLE_TIME;
+        conf->logf_name = NULL;
+        conf->pidpath = NULL;
+        conf->maxclients = 100;
 }
 
 /**
  * Load the configuration.
  */
-int reload_config_file (const char *config_fname, struct config_s *conf,
-                        struct config_s *defaults)
+int reload_config_file (const char *config_fname, struct config_s *conf)
 {
         int ret;
 
@@ -566,7 +473,7 @@ int reload_config_file (const char *config_fname, struct config_s *conf,
 
         free_config (conf);
 
-        initialize_with_defaults (conf, defaults);
+        initialize_config_defaults (conf);
 
         ret = load_config_file (config_fname, conf);
         if (ret != 0) {

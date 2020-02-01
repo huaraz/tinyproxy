@@ -32,9 +32,9 @@
 #endif
 
 /* Global Structures used in the program */
-extern struct config_s config;
+extern struct config_s *config;
 extern unsigned int received_sighup;    /* boolean */
 
-extern int reload_config (void);
+extern int reload_config (int reload_logging);
 
 #endif /* __MAIN_H__ */
